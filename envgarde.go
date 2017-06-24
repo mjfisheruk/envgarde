@@ -1,33 +1,38 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
+
+func loadFile() []string {
+	content, err := ioutil.ReadFile(".envgarde")
+	if err != nil {
+		log.Fatal(err)
+	}
+	lines := strings.Split(string(content), "\n")
+	return lines
+}
 
 func main() {
 
 	var docMode = flag.Bool("d", false, "Run in documentation mode")
 
 	flag.Parse()
+	var lines = loadFile()
 
-	file, err := os.Open(".envgarde")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	errorCount := 0
-
-	for scanner.Scan() {
-		envVarName := scanner.Text()
-		if *docMode {
+	if *docMode {
+		for _, envVarName := range lines {
 			fmt.Println(envVarName, "(Required)")
-		} else {
+		}
+	} else {
+		var errorCount = 0
+		for _, envVarName := range lines {
+			fmt.Println(envVarName, "(Required)")
 			_, isSet := os.LookupEnv(envVarName)
 			status := "(OK)"
 			if !isSet {
@@ -36,9 +41,7 @@ func main() {
 			}
 			fmt.Println(envVarName, status)
 		}
-	}
 
-	if !*docMode {
 		if errorCount == 0 {
 			fmt.Println("All envrionment variables set. OK.")
 			os.Exit(0)
@@ -47,9 +50,4 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
 }
