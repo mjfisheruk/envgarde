@@ -3,19 +3,39 @@ package main
 import (
 	"flag"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 )
 
-func loadFile() []string {
+type envVarRule struct {
+	Name        string
+	Description string
+}
+
+func loadTextFile() ([]envVarRule, error) {
 	content, err := ioutil.ReadFile(".envgarde")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	lines := strings.Split(string(content), "\n")
-	return lines
+	config := make([]envVarRule, len(lines))
+	for i, line := range lines {
+		config[i] = envVarRule{Name: line, Description: ""}
+	}
+	return config, nil
+}
+
+func loadYamlFile() ([]envVarRule, error) {
+	yamlFile, err := ioutil.ReadFile(".envgarde.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	var config []envVarRule
+	err = yaml.Unmarshal(yamlFile, &config)
+	return config, err
 }
 
 func main() {
@@ -23,23 +43,29 @@ func main() {
 	var docMode = flag.Bool("d", false, "Run in documentation mode")
 
 	flag.Parse()
-	var lines = loadFile()
+	config, err := loadTextFile()
+	if err != nil {
+		config, err = loadYamlFile()
+		if err != nil {
+			fmt.Println(err, "No configuration file found.")
+			os.Exit(1)
+		}
+	}
 
 	if *docMode {
-		for _, envVarName := range lines {
-			fmt.Println(envVarName, "(Required)")
+		for _, envVarRule := range config {
+			fmt.Println(envVarRule.Name, "(Required)")
 		}
 	} else {
 		var errorCount = 0
-		for _, envVarName := range lines {
-			fmt.Println(envVarName, "(Required)")
-			_, isSet := os.LookupEnv(envVarName)
+		for _, envVarRule := range config {
+			_, isSet := os.LookupEnv(envVarRule.Name)
 			status := "(OK)"
 			if !isSet {
 				status = "(ERROR: Not set)"
 				errorCount++
 			}
-			fmt.Println(envVarName, status)
+			fmt.Println(envVarRule.Name, status)
 		}
 
 		if errorCount == 0 {
