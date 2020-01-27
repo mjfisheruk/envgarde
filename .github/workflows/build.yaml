@@ -1,0 +1,22 @@
+name: Build and test
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '2.4'
+      - name: build
+        run: go build envgarde
+      - name: install-bundler
+        run: gem install bundler
+      - name: bundle
+        run: bundle
+        working-directory: test
+      - name: test
+        run: bundle exec cucumber
+        working-directory: test
