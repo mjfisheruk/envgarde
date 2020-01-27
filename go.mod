@@ -1,4 +1,4 @@
-module envgarde
+module github.com/mjfisheruk/envgarde
 
 go 1.13
 
